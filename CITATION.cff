@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software or data, please cite it as below."
+title: "Proprioceptive stability control for a 1:10-scale vehicle"
+abstract: >-
+  Code, data and plan of a study on low-cost proprioceptive stability control
+  (IMU and encoder) for a 1:10-scale vehicle, with a Simplex-style safety layer
+  towards shared autonomy.
+authors:
+  - family-names: "Hernández Moreno"
+    given-names: "Hugo"
+repository-code: "https://github.com/HuguitoH/proprioceptive-stability-rc"
+license: MIT
+date-released: "2026-10-21"

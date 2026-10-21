@@ -1,0 +1,26 @@
+name: Task
+description: Work that is not yet in planning/project.yaml (add it there too)
+labels: []
+body:
+  - type: input
+    id: task_id
+    attributes:
+      label: Task id
+      description: Id in planning/project.yaml, e.g. 2.5. Add the task there first.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Which objective or risk this serves, and where it comes from (RP section, paper).
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: The outcome that closes this issue.
+      value: "- [ ] "
+    validations:
+      required: true
