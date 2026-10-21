@@ -1,0 +1,266 @@
+# Baseline project plan: single source of truth.
+# Estimates are three-point (PERT) in hours: [optimistic, most likely, pessimistic].
+# `weeks` is the planned duration, `after` lists the tasks that must finish first.
+
+config:
+  module_start: 2026-09-23          # first session of the module (Wednesday)
+  start: 2026-10-19                 # Monday of planning week 1
+  weeks: 31                         # week 31 ends on Sunday 23 May 2027
+  hours_per_week: 14
+  christmas_weeks: [10, 11]         # planned at half capacity
+  contingency: 0.20                 # Dawson (2015): set aside 20 % of the time available
+  weekly_loading: 0.90              # no week is planned above 90 % of its hours
+  poster_week: 13                   # provisional, January assessment period
+  submission_week: 31               # provisional, to be confirmed by the module
+  repository: https://github.com/HuguitoH/proprioceptive-stability-rc
+  class_days: [2026-10-21, 2026-11-11, 2026-11-18, 2026-11-25, 2026-12-09, 2027-01-13]
+
+work_packages:
+  "1": Project management
+  "2": Platform build
+  "3": O1 Sensor validation
+  "4": O2 Controller
+  "5": Poster
+  "6": O4 Safety layer
+  "7": O3 Experiments
+  "8": O5 Dataset
+  "9": Dissertation
+  "10": S1--S2 (secondary)
+
+# Spread over the whole project, outside the activity network.
+ongoing:
+  - {id: "1.1", name: "Tasks set by the supervisor and responses to feedback", short: Supervision, est: [8, 10, 14]}
+  - {id: "1.2", name: "Project diary, weekly review and replanning", short: Diary + review, est: [5, 6, 8]}
+
+tasks:
+  - {id: M0, name: "Ethics check confirmed with the supervisor", short: M0 Ethics, fixed_week: 2, weekday: 2,
+     evidence: Written answer from the supervisor on whether a formal ethics application is needed}
+
+  - {id: "1.3", name: "Request ISO 7401 and ISO 3888-2 through the library", short: ISO standards, est: [0.5, 1, 2], weeks: 1}
+
+  - {id: "2.1", name: "Buy remaining parts", short: Buy parts, est: [1, 2, 4], weeks: 1}
+  - {id: "2.2", name: "Upper-deck layout mock-up (foam board)", short: Deck mock-up, est: [3, 4, 6], weeks: 1}
+  - {id: "2.3", name: "Power distribution and perfboard soldering", short: Perfboard, est: [8, 12, 18], weeks: 2, after: ["2.1", "2.2"]}
+  - {id: "2.4", name: "Upper-deck fabrication and wiring", short: Deck + wiring, est: [7, 10, 16], weeks: 2, after: ["2.3"]}
+  - {id: "2.5", name: "Firmware core (100 Hz loop, drivers, SD logger)", short: Firmware core, est: [10, 14, 20], weeks: 4}
+  - {id: "2.6", name: "Host unit tests and continuous integration", short: Unit tests + CI, est: [4, 6, 10], weeks: 3}
+  - {id: "2.7", name: "Safety basics (speed limit, link-loss stop, dead man's switch)", short: Safety basics, est: [4, 6, 9], weeks: 1, after: ["2.4", "2.5", "2.6", M0]}
+  - {id: "2.8", name: "Ground-truth rig (camera, ArUco tracking, perspective correction)", short: Ground truth, est: [6, 9, 15], weeks: 2, not_before: 13}
+  - {id: M1, name: "Platform ready", short: M1 Platform, after: ["2.6", "2.7"],
+     evidence: "Car built and wired, 100 Hz loop logging to microSD, speed limit and link-loss stop tested on the bench"}
+
+  - {id: "3.1", name: "Gyroscope against known rotations and encoder against measured distances", short: Gyro + encoder, est: [5, 8, 12], weeks: 2, after: ["2.5"]}
+  - {id: "3.2", name: "Allan variance from static logs", short: Allan variance, est: [5, 8, 12], weeks: 2, after: ["2.5"]}
+  - {id: "3.3", name: "Vibration spectrum on a stand and filter choice", short: Vibration, est: [2, 3, 6], weeks: 1, after: ["2.4", "2.5"]}
+  - {id: M2, name: "Sensors validated (O1 complete)", short: M2 O1, after: ["3.1", "3.2", "3.3"],
+     evidence: "Gyroscope and encoder errors against references, Allan deviation plot, filter settings chosen from the vibration spectrum"}
+
+  - {id: "4.1", name: "PI controller with anti-windup and unit tests", short: PI + tests, est: [6, 9, 14], weeks: 2, after: ["2.6"]}
+  - {id: "4.2", name: "Step-steer tests (ISO 7401) and yaw-response identification", short: Step steer, est: [5, 8, 13], weeks: 2, after: [M1, M2, "1.3"]}
+  - {id: "4.3", name: "Closed-loop tuning and timing jitter with WiFi on and off", short: Tuning, est: [6, 9, 16], weeks: 2, after: ["4.1", "4.2"]}
+  - {id: M3, name: "Controller tuned (O2 complete)", short: M3 O2, after: ["4.3"],
+     evidence: "Stable closed-loop step-steer response, loop jitter measured with and without WiFi"}
+
+  - {id: "5.1", name: "Preliminary trials with the controller on and off on tiles", short: Prelim. trials, est: [4, 6, 9], weeks: 1, after: [M3]}
+  - {id: "5.2", name: "Poster layout, background and method panels", short: Poster layout, est: [3, 4, 6], weeks: 2, after: [M2]}
+  - {id: "5.3", name: "Poster results panels and rehearsal", short: Poster results, est: [4, 5, 8], weeks: 1, after: ["5.1", "5.2"]}
+  - {id: "5.4", name: "Video of the prototype", short: Video, est: [1, 2, 4], weeks: 1, after: ["5.1"]}
+  - {id: M4, name: "Poster presentation (no hardware changes afterwards)", short: M4 Poster, after: ["5.3", "5.4"], fixed_week: 13,
+     evidence: "Progress poster presented with the build, the sensor validation and the first controller trials"}
+
+  - {id: "6.1", name: "Stability envelope and Simplex switching, with tests", short: Simplex, est: [9, 13, 20], weeks: 2, after: [M3]}
+  - {id: "6.2", name: "Sensor-health checks and degraded modes", short: Sensor health, est: [5, 7, 12], weeks: 1, after: ["6.1"]}
+  - {id: "6.3", name: "Erroneous-driver input scripts and evaluation runs", short: O4 evaluation, est: [5, 8, 12], weeks: 2, after: ["6.2", M4]}
+  - {id: "6.4", name: "Telemetry dashboard with live view and intervention log", short: Dashboard, est: [4, 6, 10], weeks: 2, after: ["6.2"], not_before: 23}
+  - {id: M5, name: "Safety layer evaluated (O4 complete)", short: M5 O4, after: ["6.3"],
+     evidence: "Interventions and envelope violations counted under pre-programmed erroneous driver inputs"}
+
+  - {id: "7.1", name: "Friction pull tests on the three surfaces", short: Pull tests, est: [2, 3, 6], weeks: 1, after: [M1]}
+  - {id: "7.2", name: "Experimental protocol with scaled timing and run order", short: Protocol, est: [4, 6, 9], weeks: 1, after: ["4.2", "1.3"]}
+  - {id: "7.3", name: "Analysis pipeline for the metrics and statistical tests", short: Analysis code, est: [5, 8, 12], weeks: 2, after: ["5.1"]}
+  - {id: "7.4", name: "Session A on the laminated board (Sine with Dwell, lane change)", short: Session A, est: [6, 8, 13], weeks: 1, after: [M4, "7.1", "7.2", "2.8"]}
+  - {id: "7.5", name: "Session B on floor tiles (Sine with Dwell, lane change)", short: Session B, est: [6, 8, 13], weeks: 1, after: ["7.4"]}
+  - {id: "7.6", name: "Session C on asphalt (Sine with Dwell, lane change)", short: Session C, est: [6, 8, 13], weeks: 1, after: ["7.5"]}
+  - {id: M6, name: "Data freeze", short: M6 Data freeze, after: ["7.6", M5],
+     evidence: "All sessions logged with at least five repetitions per condition, raw data frozen and backed up"}
+  - {id: "7.7", name: "Statistical analysis and figures", short: Statistics, est: [8, 11, 16], weeks: 2, after: [M6, "7.3"]}
+
+  - {id: "8.1", name: "Data dictionary, cleaning and repository release", short: Dataset release, est: [4, 6, 9], weeks: 3, after: [M6]}
+
+  - {id: "9.1", name: "Literature review chapter (from the proposal)", short: Lit. review, est: [8, 11, 16], weeks: 3, after: [M4]}
+  - {id: "9.2", name: "Methods chapter", short: Methods, est: [8, 11, 16], weeks: 4, after: ["7.2", "9.1"]}
+  - {id: "9.3", name: "Implementation chapter", short: Implementation, est: [6, 9, 13], weeks: 2, after: [M5, "6.4"]}
+  - {id: "9.4", name: "Results chapter", short: Results, est: [9, 13, 19], weeks: 2, after: ["7.7", "9.2"]}
+  - {id: "9.5", name: "Discussion and conclusion", short: Discussion, est: [8, 11, 16], weeks: 2, after: ["9.4"]}
+  - {id: "9.6", name: "Introduction, abstract and appendices", short: Intro + app., est: [5, 7, 10], weeks: 1, after: ["9.4", "8.1", "9.1", "9.2", "9.3"]}
+  - {id: M7, name: "Final meeting with the supervisor", short: M7 Final mtg, after: ["9.5", "9.6"],
+     evidence: Full draft discussed with the supervisor}
+  - {id: "9.7", name: "Proofreading, references and formatting", short: Proofreading, est: [6, 9, 13], weeks: 1, after: [M7]}
+  - {id: M8, name: "Final submission", short: M8 Submission, after: ["9.7"], fixed_week: 31, weekday: 2,
+     evidence: Dissertation submitted (date to be confirmed by the module)}
+
+  - {id: "10.1", name: "S1 grip estimation from logged data", short: S1 Grip, est: [10, 16, 24], weeks: 2, after: [M6], secondary: true}
+  - {id: "10.2", name: "S2 gain adaptation and comparison", short: S2 Adaptive, est: [10, 16, 24], weeks: 2, after: ["10.1"], secondary: true}
+
+# Impact = likelihood (1-3) x consequence (1-5), Dawson (2015).
+risks:
+  - risk: "Scope creep, with time going into extras such as dashboard polish, the AI layer or new sensors"
+    type: Non-technical, evolving
+    likelihood: 3
+    consequence: 4
+    strategy: Avoidance
+    mitigation: "Scope priorities fixed in Figure~\\ref{fig:mvp}, with S1--S2 outside the baseline. New ideas go to a list in the project diary. Any change of scope needs the supervisor's agreement and is recorded in Appendix~C."
+    trigger: Hours spent on work outside the baseline while a primary milestone slips.
+  - risk: Writing takes longer than estimated
+    type: Non-technical, evolving
+    likelihood: 3
+    consequence: 4
+    strategy: Avoidance
+    mitigation: "Chapters are written from February onwards, alongside the experiments, and each one is a separate task. The literature review and methods build on the approved proposal."
+    trigger: A chapter not drafted by the end of its planned week.
+  - risk: Deadlines from the other four modules
+    type: Non-technical, evolving
+    likelihood: 3
+    consequence: 3
+    strategy: Contingency
+    mitigation: "Fixed weekly time slots for this project. Coursework deadlines are marked in the diary in advance. The 20\\,\\% contingency absorbs busy weeks."
+    trigger: Two weeks in a row with fewer than 10\,h on the project.
+  - risk: Confirmed poster or submission date earlier than planned
+    type: Non-technical, event-driven
+    likelihood: 2
+    consequence: 4
+    strategy: Contingency
+    mitigation: "Both dates are parameters of the planner, so the plan is regenerated the day they are confirmed. Before the poster, the build, validation and tuning keep priority over everything else, and the poster can fall back on the sensor validation and the open-loop step-steer results."
+    trigger: Dates published by the module that differ from weeks 13 and 31.
+  - risk: Slow progress in the build phase
+    type: Non-technical, evolving
+    likelihood: 2
+    consequence: 4
+    strategy: Avoidance
+    mitigation: "The firmware, the unit tests and the PI controller (2.5, 2.6, 4.1) are developed on the laptop in parallel, so a slow build does not stop the software work."
+    trigger: M1 not reached in week~7.
+  - risk: Experimental sessions have to be repeated
+    type: Technical, evolving
+    likelihood: 2
+    consequence: 4
+    strategy: Contingency
+    mitigation: "Slack after the sessions plus reserve hours. Conditions are alternated within each session. The secondary objectives are dropped first."
+    trigger: Session A not finished in its planned week.
+  - risk: Component failure or damage in a crash
+    type: Technical, event-driven
+    likelihood: 2
+    consequence: 4
+    strategy: Contingency
+    mitigation: "A spare ESP32-S3 and a spare IMU are available. Bench tests with the wheels lifted come first, and the hardware is not changed between sessions."
+    trigger: Intermittent readings or sensor-health warnings.
+  - risk: Sensor noise or vibration too high for control
+    type: Technical, evolving
+    likelihood: 2
+    consequence: 4
+    strategy: Avoidance
+    mitigation: "The sensors are characterised early (O1). The IMU is mounted rigidly and filtered in software, and it is only replaced if the data justify it."
+    trigger: Vibration peaks inside the control band, or high gyroscope bias instability.
+  - risk: The controller cannot be tuned to a stable loop
+    type: Technical, evolving
+    likelihood: 2
+    consequence: 4
+    strategy: Avoidance
+    mitigation: "The yaw response is identified before tuning, and the gains start conservative, with a P-only fallback. A negative result still answers the research question."
+    trigger: Oscillation or saturation in the step-steer tests.
+  - risk: Rain prevents the outdoor session
+    type: Non-technical, event-driven
+    likelihood: 2
+    consequence: 3
+    strategy: Contingency
+    mitigation: "Session C is replaced by an indoor high-grip surface whose friction is measured with the same pull test. H2 is tested against measured friction, so three friction levels are kept. The change is recorded in Appendix~C."
+    trigger: Rain forecast for the planned week.
+  - risk: Purchase of the remaining parts delayed
+    type: Non-technical, event-driven
+    likelihood: 2
+    consequence: 3
+    strategy: Contingency
+    mitigation: The parts are low-cost. Firmware, tests and simulation continue without them.
+    trigger: Parts not ordered by the end of October.
+  - risk: Loss of control or collision during testing
+    type: Technical, event-driven
+    likelihood: 2
+    consequence: 3
+    strategy: Avoidance
+    mitigation: "Firmware speed limit, automatic stop if the link is lost, soft barriers indoors and outdoor tests only in empty areas."
+    trigger: Any near miss during a session.
+  - risk: Ground-truth tracking not accurate enough
+    type: Technical, evolving
+    likelihood: 2
+    consequence: 3
+    strategy: Avoidance
+    mitigation: "The rig is checked against measured floor points before the first session. If it fails, the path is measured against tape markers on the floor."
+    trigger: Position error of more than a few centimetres at the floor points.
+  - risk: Data loss (laptop or microSD failure)
+    type: Technical, event-driven
+    likelihood: 1
+    consequence: 5
+    strategy: Contingency
+    mitigation: "Code and logs are pushed to the repository after every session, and raw logs are also copied to cloud storage on the same day."
+    trigger: Data more than one day old that exists in only one place.
+  - risk: Illness or personal emergency
+    type: Non-technical, event-driven
+    likelihood: 1
+    consequence: 4
+    strategy: Contingency
+    mitigation: "The 20\\,\\% contingency, and the university's extenuating-circumstances procedure if more time is lost."
+    trigger: More than one week lost.
+  - risk: Feedback on a submitted task requires rework
+    type: Non-technical, event-driven
+    likelihood: 2
+    consequence: 2
+    strategy: Contingency
+    mitigation: "Tasks set by the supervisor are submitted on time, so that feedback arrives before the next step depends on it. Rework comes out of the reserve hours."
+    trigger: Feedback that changes an earlier decision.
+
+# Summary network (Figure 3): grouped tasks in the style of the module example.
+# `at` is [column, row]; columns that hold only a milestone are drawn narrower.
+network:
+  groups:
+    - {name: Build the platform, tasks: ["2.1", "2.2", "2.3", "2.4", "2.7"], at: [0, 0]}
+    - {name: "Firmware, tests and PI code", tasks: ["2.5", "2.6", "4.1"], at: [0, 1]}
+    - {name: O1 Sensor validation, tasks: ["3.1", "3.2", "3.3"], at: [1, 0]}
+    - {name: O2 Step steer and tuning, tasks: ["4.2", "4.3"], at: [2, 1]}
+    - {name: Poster and video, tasks: ["5.1", "5.2", "5.3", "5.4"], at: [3, 1]}
+    - {name: "Pull tests, protocol, ground truth", tasks: ["7.1", "7.2", "2.8"], at: [3, 2]}
+    - {name: Literature review and methods, tasks: ["9.1", "9.2"], at: [5, 0]}
+    - {name: O3 Sessions A--C, tasks: ["7.4", "7.5", "7.6"], at: [5, 1]}
+    - {name: O4 Safety layer and dashboard, tasks: ["6.1", "6.2", "6.3", "6.4"], at: [5, 2]}
+    - {name: S1--S2 (secondary), tasks: ["10.1", "10.2"], at: [7, 0]}
+    - {name: "Analysis, statistics, dataset", tasks: ["7.3", "7.7", "8.1"], at: [7, 1]}
+    - {name: Implementation chapter, tasks: ["9.3"], at: [7, 2]}
+    - {name: "Results, discussion, final draft", tasks: ["9.4", "9.5", "9.6", "9.7"], at: [8, 1]}
+  milestones:
+    M4: [4, 1]
+    M6: [6, 1]
+    M8: [9, 1]
+
+# Scope priorities (Figure 2). value: how much a feature helps to answer the research
+# question; effort: how much work it needs. Both on a 1-5 scale.
+# decision: baseline | conditional | gaps | future
+scope:
+  - {name: Raw logging to microSD with timestamps, value: 4.8, effort: 1.6, decision: baseline}
+  - {name: Gyroscope bias calibration at rest, value: 4.3, effort: 0.9, decision: baseline}
+  - {name: Expected yaw rate from the bicycle model, value: 4.9, effort: 0.9, decision: baseline}
+  - {name: PI controller with anti-windup, value: 4.6, effort: 2.1, decision: baseline}
+  - {name: 100 Hz control loop on FreeRTOS, value: 4.1, effort: 2.5, decision: baseline}
+  - {name: Wheel-spin check (encoder against IMU), value: 3.7, effort: 1.4, decision: baseline}
+  - {name: Speed limit and link-loss stop, value: 3.4, effort: 0.8, decision: baseline}
+  - {name: Simplex switch with the envelope, value: 4.5, effort: 4.0, decision: baseline}
+  - {name: ArUco ground-truth rig, value: 4.0, effort: 3.5, decision: baseline}
+  - {name: Erroneous driver inputs for O4, value: 3.6, effort: 3.0, decision: baseline}
+  - {name: Sensor-health checks, value: 3.0, effort: 2.6, decision: baseline}
+  - {name: Dashboard with intervention log, value: 3.0, effort: 2.9, decision: baseline}
+  - {name: Video of the prototype, value: 2.2, effort: 1.1, decision: baseline}
+  - {name: S1 grip estimation, value: 3.6, effort: 4.6, decision: conditional}
+  - {name: S2 gain adaptation, value: 3.1, effort: 4.4, decision: conditional}
+  - {name: Visual polish of the dashboard, value: 1.3, effort: 1.6, decision: gaps}
+  - {name: 3D view of the vehicle attitude, value: 1.7, effort: 2.2, decision: gaps}
+  - {name: Motor-current sensing, value: 2.0, effort: 3.6, decision: future}
+  - {name: Optical-flow ground speed, value: 1.8, effort: 4.4, decision: future}
+  - {name: Race-style 3D dashboard, value: 1.0, effort: 4.0, decision: future}
+  - {name: Camera-based perception, value: 1.4, effort: 4.9, decision: future}
