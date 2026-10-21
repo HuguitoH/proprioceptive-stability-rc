@@ -27,6 +27,20 @@ work_packages:
   "9": Dissertation
   "10": S1--S2 (secondary)
 
+# Where each work package comes from. It is written into every GitHub issue, so
+# a commit can be traced back to an objective and a section of the proposal.
+traceability:
+  "1": "Appendix D, project management"
+  "2": "RP Methods, Platform"
+  "3": "O1 · RP Methods, Sensor validation"
+  "4": "O2 · RP Methods, Identification and tuning"
+  "5": "IS 40 module, progress poster"
+  "6": "O4 · RP Methods, Safety architecture"
+  "7": "O3 · RP Methods, Stability evaluation, Experimental conditions, Metrics and analysis"
+  "8": "O5 · RP Methods, Ground truth and data"
+  "9": "IS 40 template, dissertation chapters"
+  "10": "S1-S2 · RP Methods, Grip estimation (secondary)"
+
 # Spread over the whole project, outside the activity network.
 ongoing:
   - {id: "1.1", name: "Tasks set by the supervisor and responses to feedback", short: Supervision, est: [8, 10, 14]}
@@ -101,6 +115,148 @@ tasks:
 
   - {id: "10.1", name: "S1 grip estimation from logged data", short: S1 Grip, est: [10, 16, 24], weeks: 2, after: [M6], secondary: true}
   - {id: "10.2", name: "S2 gain adaptation and comparison", short: S2 Adaptive, est: [10, 16, 24], weeks: 2, after: ["10.1"], secondary: true}
+
+# What each task involves and what closes it. Written into its GitHub issue.
+# Rolling wave: the build, validation and tuning phases are detailed now; the
+# later phases are detailed when the plan is revised after the poster.
+details:
+  "1.1":
+    what: >-
+      Answer every task the supervisor sets on a class day and act on the written
+      feedback. Each contact is recorded in records/supervision.csv of the thesis
+      repository, which generates Appendix E.
+    done_when:
+      - "Every class-day task answered and its feedback recorded"
+      - "Final meeting held (M7)"
+  "1.2":
+    what: >-
+      Keep the project diary and review the week every Sunday: planned against
+      actual hours, forecast for the next milestone and any risk trigger seen.
+      Replan when a milestone is expected to slip by more than a week.
+    done_when:
+      - "One diary entry and one review per week until submission"
+      - "Hours logged in log/hours.csv every week"
+  "1.3":
+    what: >-
+      Only sample pages of ISO 7401 and ISO 3888-2 are available. Request the full
+      standards through the CCCU library, needed to scale the step-steer and
+      lane-change procedures.
+    done_when:
+      - "Both standards available in full"
+      - "Test parameters needed for 4.2 and 7.2 noted in the diary"
+  "2.1":
+    what: >-
+      Buy the low-cost parts still missing for the build: perfboard, connectors,
+      wire, fuse, power switch and foam board for the mock-up.
+    done_when:
+      - "All parts for 2.3 and 2.4 in hand"
+      - "Bill of materials in docs/ updated with prices"
+  "2.2":
+    what: >-
+      Mock up the upper deck in foam board before cutting anything: position of
+      the ESP32-S3, regulators, microSD module, RC receiver and batteries around
+      the IMU and Hall sensor already fixed to the base. Check cable runs and keep
+      the centre of mass low and centred.
+    done_when:
+      - "Layout fixed with dimensions"
+      - "Photo and notes added to the build log in docs/"
+  "2.3":
+    what: >-
+      Build the power distribution (NiMH batteries, DC-DC regulators, fuse and
+      power switch) and the perfboard that carries the ESP32-S3 and the sensor
+      connectors.
+    done_when:
+      - "Every rail measured under load and within tolerance"
+      - "Continuity checked before the first power-up"
+      - "Schematic and photos in docs/"
+  "2.4":
+    what: >-
+      Fabricate the upper deck from the mock-up and wire sensors, receiver, servo
+      and ESC to the perfboard.
+    done_when:
+      - "Car powers up from its own batteries"
+      - "IMU, Hall sensor and receiver read correctly; servo and ESC respond"
+      - "Wiring diagram in docs/"
+  "2.5":
+    what: >-
+      Turn the summer prototype into the firmware the experiments need: a fixed
+      100 Hz control task (FreeRTOS, vTaskDelayUntil), speed from the period
+      between Hall pulses instead of a 500 ms window, gyroscope bias estimated at
+      rest, a timestamped CSV logger on the microSD card, the RC receiver channels
+      as driver input, and telemetry moved to its own task on the other core so it
+      can never delay control. Pure logic goes to lib/core with tests.
+    done_when:
+      - "Control loop runs at 100 Hz with its jitter measured and logged"
+      - "One run logged to microSD and readable on the laptop"
+      - "Telemetry runs without changing the loop timing"
+  "2.6":
+    what: >-
+      Unit tests of lib/core on the laptop (pio test -e native) and continuous
+      integration on every push. The native environment, the first tests and the
+      CI were set up with the repository; what remains is covering the core logic
+      added in 2.5.
+    done_when:
+      - "CI runs the firmware tests, the firmware build and the Python tests"
+      - "Speed estimation and gyroscope bias covered by unit tests"
+  "2.7":
+    what: >-
+      Safety before the car moves under its own control: a firmware speed limit,
+      a stop when the RC link is lost (receiver fail-safe set to neutral throttle
+      and channel 3 to a value never used in normal driving) and a dead man's
+      switch on channel 3.
+    done_when:
+      - "With the wheels lifted, switching off the transmitter stops the motor, and the stopping time is measured"
+      - "Releasing the dead man's switch stops the motor"
+      - "Speed limit tested on the bench"
+  "2.8":
+    what: >-
+      Ground-truth trajectory from a fixed camera tracking an ArUco marker on the
+      car, with perspective corrected from four measured floor points.
+    done_when:
+      - "Position error checked against measured floor points"
+      - "Tracking script in tools/ with its calibration documented"
+  "3.1":
+    what: >-
+      Check the gyroscope against known rotations and the encoder against measured
+      distances.
+    done_when:
+      - "Gyroscope scale error and encoder error reported with their uncertainty"
+  "3.2":
+    what: >-
+      Characterise gyroscope noise with Allan variance computed from long static
+      logs.
+    done_when:
+      - "Allan deviation plot with bias instability and angle random walk"
+      - "Analysis code in analysis/"
+  "3.3":
+    what: >-
+      Measure the vibration spectrum with the car on a stand and the motor running,
+      and choose the MPU6050 low-pass filter and any software filter from it, so
+      vibration stays out of the control band.
+    done_when:
+      - "Spectrum plot with the chosen filter settings justified"
+  "4.1":
+    what: >-
+      PI yaw-rate controller in lib/core with anti-windup, tracking the reference
+      from the kinematic bicycle model (yaw rate = v / L * tan(delta)). Tested on
+      the laptop against a simulated first-order yaw response before it touches
+      the car.
+    done_when:
+      - "Unit tests cover saturation, anti-windup and a simulated step response"
+  "4.2":
+    what: >-
+      Step-steer manoeuvres based on ISO 7401 to identify how the yaw rate responds
+      to steering (time constant and steady-state gain). The measured response time
+      also sets how much latency the safety layer can afford.
+    done_when:
+      - "Time constant and gain identified at the test speeds, with the fit quality"
+  "4.3":
+    what: >-
+      Tune the closed loop on the car and measure the timing jitter with WiFi on
+      and off.
+    done_when:
+      - "Stable closed-loop step-steer response"
+      - "Loop jitter measured with and without WiFi"
 
 # Impact = likelihood (1-3) x consequence (1-5), Dawson (2015).
 risks:

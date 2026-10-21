@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from .model import Config, Estimate, Feature, PlanError, Project, Risk, Task
+from .model import Config, Detail, Estimate, Feature, PlanError, Project, Risk, Task
 
 
 TASK_KEYS = {"id", "name", "short", "est", "weeks", "after", "secondary",
@@ -59,9 +59,22 @@ def load(path: Path) -> Project:
         risks=[Risk(**r) for r in data["risks"]],
         network=data["network"],
         scope=[Feature(**f) for f in data.get("scope", [])],
+        traceability={str(k): v for k, v in data.get("traceability", {}).items()},
     )
+    _attach_details(project, data.get("details", {}))
     validate(project)
     return project
+
+
+def _attach_details(project: Project, details: dict) -> None:
+    tasks = {t.id: t for t in project.ongoing + project.tasks}
+    for task_id, raw in details.items():
+        task = tasks.get(str(task_id))
+        if task is None:
+            raise PlanError(f"details given for unknown task {task_id}")
+        if set(raw) - {"what", "done_when"}:
+            raise PlanError(f"details of {task_id}: only 'what' and 'done_when' are allowed")
+        task.detail = Detail(raw["what"].strip(), tuple(raw.get("done_when", [])))
 
 
 def validate(project: Project) -> None:

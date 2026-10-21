@@ -39,6 +39,18 @@ class Estimate:
         return (self.pessimistic - self.optimistic) / 6
 
 
+@dataclass(frozen=True)
+class Detail:
+    """What a task involves and what closes it, written into its GitHub issue.
+
+    Filled in rolling-wave fashion: near-term tasks are detailed now, later
+    ones when their phase is replanned.
+    """
+
+    what: str
+    done_when: tuple[str, ...]
+
+
 @dataclass
 class Task:
     id: str
@@ -52,6 +64,7 @@ class Task:
     weekday: int = 4                      # milestone date inside its week (0 = Monday)
     not_before: int = 0                   # earliest start week index, for levelling
     evidence: str = ""                    # what proves a milestone is reached
+    detail: Detail | None = None          # description and definition of done
     # Filled in by the scheduler (week indices, 0-based, end-exclusive).
     es: int = 0
     ef: int = 0
@@ -145,6 +158,7 @@ class Project:
     risks: list[Risk]
     network: dict
     scope: list[Feature] = field(default_factory=list)
+    traceability: dict[str, str] = field(default_factory=dict)   # work package -> objective and RP section
 
     def task(self, task_id: str) -> Task:
         return next(t for t in self.tasks if t.id == task_id)
