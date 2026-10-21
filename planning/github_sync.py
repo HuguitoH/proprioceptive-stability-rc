@@ -19,6 +19,7 @@ import argparse
 import json
 import subprocess
 import sys
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import date
@@ -210,6 +211,10 @@ def plan_commands(desired: State, existing: Existing, repo: str) -> list[list[st
 
 
 # --------------------------------------------------------------------------- GitHub
+class GhError(RuntimeError):
+    """A gh command failed. Carries GitHub's own message, not just the exit code."""
+
+
 class GhClient:
     """Thin wrapper over the GitHub CLI (`gh`), which handles authentication."""
 
@@ -232,9 +237,23 @@ class GhClient:
                         frozenset(x["title"] for x in issues),
                         placeholders)
 
-    @staticmethod
-    def run(cmd: list[str]) -> None:
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    # GitHub limits how fast content can be created and recommends at least one
+    # second between such requests. Going faster triggers its secondary rate
+    # limit and the request is rejected.
+    PAUSE_S = 1.5
+    RETRY_AFTER_S = 60
+
+    def run(self, cmd: list[str]) -> None:
+        for attempt in (1, 2):
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                time.sleep(self.PAUSE_S)
+                return
+            if attempt == 1 and "rate limit" in result.stderr.lower():
+                print(f"  rate limited by GitHub, waiting {self.RETRY_AFTER_S} s and retrying")
+                time.sleep(self.RETRY_AFTER_S)
+                continue
+            raise GhError(f"{_describe(cmd)}\n{result.stderr.strip()}")
 
 
 def repo_slug(url: str) -> str:
@@ -271,7 +290,13 @@ def main(argv: list[str] | None = None) -> int:
     for cmd in commands:
         print(("creating   " if args.apply else "would add  ") + _describe(cmd))
         if args.apply:
-            client.run(cmd)
+            try:
+                client.run(cmd)
+            except GhError as err:
+                print(f"\nGitHub refused: {err}\nNothing after this was created. "
+                      "Fix the cause and run again: only the missing items are created.",
+                      file=sys.stderr)
+                return 1
     if not args.apply:
         print(f"\n{len(commands)} items missing. Run again with --apply to create them.")
     return 0
