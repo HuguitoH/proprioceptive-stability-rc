@@ -1,0 +1,6 @@
+# Store every text file with LF line endings, whatever the OS that edits it.
+# Without this, Windows checkouts show every file as modified (CRLF).
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.jpg binary

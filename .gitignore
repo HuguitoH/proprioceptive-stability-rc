@@ -1,0 +1,19 @@
+# ---------- Firmware ----------
+.pio/
+firmware/include/secrets.h
+
+# ---------- Python ----------
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+generated/
+
+# ---------- Data: raw logs never go into git ----------
+data/raw/
+data/processed/
+
+# ---------- Editors and OS ----------
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
