@@ -4,8 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from planning.github_sync import (Existing, desired_state, issue_title, milestone_title,
-                                  next_milestone, plan_commands, repo_slug)
+from datetime import date
+
+from planning.github_sync import (Existing, ProjectBoard, Schedule, desired_state, issue_title,
+                                  milestone_title, next_milestone, plan_commands,
+                                  plan_field_commands, repo_slug, schedules)
 from planning.loader import load
 from planning.model import PlanError
 from planning.scheduler import level
@@ -73,7 +76,7 @@ def test_nothing_is_created_twice(state):
 
 
 def test_labels_and_milestones_are_created_before_issues(state):
-    kinds = [cmd[1] for cmd in plan_commands(state, Existing(), REPO)]
+    kinds = [cmd.argv[1] for cmd in plan_commands(state, Existing(), REPO)]
     first_issue = kinds.index("issue")
     assert "label" not in kinds[first_issue:] and "api" not in kinds[first_issue:]
 
@@ -102,8 +105,8 @@ def test_only_placeholder_bodies_are_refreshed(project, state):
     untouched = Existing(names, milestones, titles,
                          {issue.title: (7, "old body\n- [ ] _Defined when this task is detailed._")})
     edited_by_hand = Existing(names, milestones, titles)
-    assert plan_commands(state, untouched, REPO) == \
-        [["gh", "issue", "edit", "7", "--repo", REPO, "--body", issue.body]]
+    assert [c.argv for c in plan_commands(state, untouched, REPO)] == \
+        [("gh", "issue", "edit", "7", "--repo", REPO, "--body", issue.body)]
     assert plan_commands(state, edited_by_hand, REPO) == []
 
 
@@ -113,3 +116,37 @@ def test_details_for_an_unknown_task_are_rejected(tmp_path):
     bad.write_text(text)
     with pytest.raises(PlanError):
         load(bad)
+
+
+# --------------------------------------------------------------------------- project fields
+FIELD_IDS = {"start": "F_start", "target": "F_target", "estimate": "F_est"}
+
+
+def test_schedule_matches_the_plan(project):
+    sched = schedules(project)[issue_title(project.task("2.5"))]
+    assert sched == Schedule(date(2026, 10, 19), date(2026, 11, 15), 14.3)
+
+
+def test_every_issue_has_a_schedule(project, state):
+    assert set(schedules(project)) == {i.title for i in state.issues}
+
+
+def test_fields_are_set_when_empty():
+    wanted = {"2.5 X": Schedule(date(2026, 10, 19), date(2026, 11, 15), 14.3)}
+    board = ProjectBoard("P1", FIELD_IDS, {"2.5 X": ("I9", {})})
+    argvs = [c.argv for c in plan_field_commands(wanted, board)]
+    assert [a[-2:] for a in argvs] == [("--date", "2026-10-19"), ("--date", "2026-11-15"),
+                                       ("--number", "14.3")]
+    assert all(a[a.index("--id") + 1] == "I9" and a[a.index("--project-id") + 1] == "P1" for a in argvs)
+
+
+def test_fields_already_matching_are_left_alone():
+    wanted = {"2.5 X": Schedule(date(2026, 10, 19), date(2026, 11, 15), 14.3)}
+    current = {"start": "2026-10-19", "target": "2026-11-15T00:00:00Z", "estimate": 14.3}
+    board = ProjectBoard("P1", FIELD_IDS, {"2.5 X": ("I9", current)})
+    assert plan_field_commands(wanted, board) == []
+
+
+def test_issues_not_on_the_board_are_skipped():
+    wanted = {"2.5 X": Schedule(date(2026, 10, 19), date(2026, 11, 15), 14.3)}
+    assert plan_field_commands(wanted, ProjectBoard("P1", FIELD_IDS, {})) == []

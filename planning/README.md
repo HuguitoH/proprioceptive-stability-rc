@@ -8,9 +8,15 @@ is made here and nowhere else.
 |---|---|
 | `uv run python -m planning` | Schedules the plan and writes the Appendix D tables and diagrams to `generated/` |
 | `uv run python -m planning.github_sync` | Dry run: lists the labels, milestones and issues missing on GitHub |
-| `uv run python -m planning.github_sync --apply` | Creates them. Never edits or closes anything, so it is safe to run again |
+| `uv run python -m planning.github_sync --apply` | Creates them. Never closes anything, so it is safe to run again |
+| `uv run python -m planning.github_sync --project 1 --apply` | Also sets **Start**, **Target** and **Estimate** on Project number 1, so the Roadmap draws the plan |
 
-The sync needs the [GitHub CLI](https://cli.github.com/) logged in (`gh auth login`).
+The sync needs the [GitHub CLI](https://cli.github.com/) logged in with access to
+Projects: `gh auth login`, then `gh auth refresh -s project`.
+
+Planned dates and estimates belong to the plan: to change one, edit
+`project.yaml` and run the sync, rather than dragging the bar on the board.
+The next run would put it back.
 
 ## GitHub Project (set up once, by hand)
 

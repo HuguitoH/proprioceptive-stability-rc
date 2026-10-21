@@ -2,11 +2,14 @@
 
     uv run python -m planning.github_sync                 # dry run: print what would change
     uv run python -m planning.github_sync --apply         # create what is missing
+    uv run python -m planning.github_sync --project 1     # also fill Start/Target/Estimate
 
 project.yaml stays the single source of truth. The sync creates what is missing,
-matched by title, and never closes anything. The only edit it makes is filling in
-the body of an issue that still shows a placeholder, once its task is detailed in
-the plan, so running it again is safe and nothing written on GitHub is lost.
+matched by title, and never closes anything. It edits only two things: the body
+of an issue that still shows a placeholder, once its task is detailed, and the
+planned Start, Target and Estimate on the Project, which belong to the plan. To
+change a planned date, change project.yaml, not the board. Running it again is
+always safe.
 
 The work is split in three steps so the logic can be tested without GitHub:
   desired_state()  plan    -> what GitHub should contain     (pure)
@@ -22,10 +25,10 @@ import sys
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
-from .calendar import finish_date, fmt, start_date
+from .calendar import finish_date, fmt, monday, start_date
 from .loader import load
 from .model import Project, Task
 from .scheduler import level
@@ -40,6 +43,14 @@ PLACEHOLDER_MARKERS = ("_Defined when this task is detailed._",
                        "_Define the outcome that closes this issue before starting it._")
 ROLLING_WAVE_NOTE = ("_Not detailed yet. Following the rolling-wave approach of Appendix D, this task is "
                      "detailed when its phase is replanned after the poster presentation._")
+
+
+@dataclass(frozen=True)
+class Command:
+    """A gh invocation plus a one-line summary for the dry run."""
+
+    argv: tuple[str, ...]
+    summary: str
 
 
 @dataclass(frozen=True)
@@ -182,32 +193,102 @@ def desired_state(project: Project) -> State:
 
 
 # --------------------------------------------------------------------------- commands
-def plan_commands(desired: State, existing: Existing, repo: str) -> list[list[str]]:
+def plan_commands(desired: State, existing: Existing, repo: str) -> list[Command]:
     """gh commands that create what is missing, in an order that always works:
     labels and milestones first, because issues refer to them."""
-    cmds: list[list[str]] = []
+    cmds: list[Command] = []
     for lb in desired.labels:
         if lb.name not in existing.labels:
-            cmds.append(["gh", "label", "create", lb.name, "--repo", repo,
-                         "--color", lb.colour, "--description", lb.description])
+            cmds.append(Command(("gh", "label", "create", lb.name, "--repo", repo,
+                                 "--color", lb.colour, "--description", lb.description),
+                                f"label      {lb.name}"))
     for ms in desired.milestones:
         if ms.title not in existing.milestones:
-            cmds.append(["gh", "api", f"repos/{repo}/milestones", "--method", "POST",
-                         "-f", f"title={ms.title}", "-f", f"due_on={ms.due.isoformat()}T23:59:59Z",
-                         "-f", f"description={ms.description}"])
+            cmds.append(Command(("gh", "api", f"repos/{repo}/milestones", "--method", "POST",
+                                 "-f", f"title={ms.title}",
+                                 "-f", f"due_on={ms.due.isoformat()}T23:59:59Z",
+                                 "-f", f"description={ms.description}"),
+                                f"milestone  {ms.title}"))
     for iss in desired.issues:
         stale = existing.placeholders.get(iss.title)
         if stale and stale[1].strip() != iss.body.strip():
-            cmds.append(["gh", "issue", "edit", str(stale[0]), "--repo", repo, "--body", iss.body])
+            cmds.append(Command(("gh", "issue", "edit", str(stale[0]), "--repo", repo,
+                                 "--body", iss.body), f"detail     {iss.title}"))
             continue
         if iss.title not in existing.issues:
-            cmd = ["gh", "issue", "create", "--repo", repo, "--title", iss.title, "--body", iss.body]
+            argv = ["gh", "issue", "create", "--repo", repo, "--title", iss.title, "--body", iss.body]
             for lb in iss.labels:
-                cmd += ["--label", lb]
+                argv += ["--label", lb]
             if iss.milestone:
-                cmd += ["--milestone", iss.milestone]
-            cmds.append(cmd)
+                argv += ["--milestone", iss.milestone]
+            cmds.append(Command(tuple(argv), f"issue      {iss.title}"))
     return cmds
+
+
+# --------------------------------------------------------------------------- project fields
+# The GitHub Project draws its Roadmap from these fields, not from the issue text,
+# so the dates and estimates of the plan are copied into them.
+FIELD_NAMES = {"start": "Start", "target": "Target", "estimate": "Estimate"}
+
+
+@dataclass(frozen=True)
+class Schedule:
+    """Planned values of one issue, in the form the Project fields take."""
+
+    start: date
+    target: date
+    estimate: float
+
+
+@dataclass(frozen=True)
+class ProjectBoard:
+    """A GitHub Project: its id, the ids of the three fields, and its items by issue title."""
+
+    project_id: str
+    field_ids: dict[str, str]                    # "start" | "target" | "estimate" -> field id
+    items: dict[str, tuple[str, dict]]           # issue title -> (item id, current values)
+
+
+def schedules(project: Project) -> dict[str, Schedule]:
+    """Issue title -> planned start, target and estimate. The project must be levelled."""
+    c = project.config
+    end = monday(c, c.weeks) - timedelta(days=1)
+    out = {issue_title(t): Schedule(c.start, end, round(t.estimate.expected, 1))
+           for t in project.ongoing}
+    for t in project.tasks:
+        if not t.is_milestone:
+            out[issue_title(t)] = Schedule(start_date(c, t), finish_date(c, t),
+                                           round(t.estimate.expected, 1))
+    return out
+
+
+def plan_field_commands(wanted: dict[str, Schedule], board: ProjectBoard) -> list[Command]:
+    """gh commands that set the fields whose value differs from the plan.
+    Issues that are not on the board yet are skipped: auto-add puts them there."""
+    cmds: list[Command] = []
+    for title, sched in wanted.items():
+        if title not in board.items:
+            continue
+        item_id, current = board.items[title]
+        for key, flag, value in (("start", "--date", sched.start.isoformat()),
+                                 ("target", "--date", sched.target.isoformat()),
+                                 ("estimate", "--number", f"{sched.estimate:g}")):
+            if _same(current.get(key), value):
+                continue
+            cmds.append(Command(("gh", "project", "item-edit", "--id", item_id,
+                                 "--project-id", board.project_id,
+                                 "--field-id", board.field_ids[key], flag, value),
+                                f"field      {title}: {FIELD_NAMES[key]} = {value}"))
+    return cmds
+
+
+def _same(current: object, wanted: str) -> bool:
+    if current is None:
+        return False
+    try:
+        return abs(float(current) - float(wanted)) < 1e-6
+    except (TypeError, ValueError):
+        return str(current)[:10] == wanted
 
 
 # --------------------------------------------------------------------------- GitHub
@@ -221,9 +302,11 @@ class GhClient:
     def __init__(self, repo: str) -> None:
         self.repo = repo
 
-    def _json(self, *args: str) -> list[dict]:
-        out = subprocess.run(["gh", *args], check=True, capture_output=True, text=True).stdout
-        return json.loads(out or "[]")
+    def _json(self, *args: str):
+        result = subprocess.run(["gh", *args], capture_output=True, text=True)
+        if result.returncode != 0:
+            raise GhError(f"gh {' '.join(args[:3])}\n{result.stderr.strip()}")
+        return json.loads(result.stdout or "[]")
 
     def existing(self) -> Existing:
         labels = self._json("label", "list", "--repo", self.repo, "--limit", "200", "--json", "name")
@@ -243,9 +326,32 @@ class GhClient:
     PAUSE_S = 1.5
     RETRY_AFTER_S = 60
 
-    def run(self, cmd: list[str]) -> None:
+    def board(self, number: int) -> ProjectBoard:
+        owner = self.repo.split("/")[0]
+        projects = self._json("project", "list", "--owner", owner, "--format", "json")
+        project = next((p for p in projects.get("projects", []) if p["number"] == number), None)
+        if project is None:
+            raise GhError(f"project {number} not found for {owner}. "
+                          "If it exists, run: gh auth refresh -s project")
+        fields = self._json("project", "field-list", str(number), "--owner", owner,
+                            "--format", "json", "--limit", "100")
+        by_name = {f["name"]: f["id"] for f in fields.get("fields", [])}
+        missing = [n for n in FIELD_NAMES.values() if n not in by_name]
+        if missing:
+            raise GhError(f"the project has no field {', '.join(missing)}. "
+                          "Create Start and Target (date) and Estimate (number) first.")
+        listed = self._json("project", "item-list", str(number), "--owner", owner,
+                            "--format", "json", "--limit", "500")
+        items = {}
+        for it in listed.get("items", []):
+            content = it.get("content") or {}
+            if content.get("type") == "Issue":
+                items[content["title"]] = (it["id"], {k: it.get(k) for k in FIELD_NAMES})
+        return ProjectBoard(project["id"], {k: by_name[v] for k, v in FIELD_NAMES.items()}, items)
+
+    def run(self, cmd: Command) -> None:
         for attempt in (1, 2):
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd.argv, capture_output=True, text=True)
             if result.returncode == 0:
                 time.sleep(self.PAUSE_S)
                 return
@@ -253,7 +359,7 @@ class GhClient:
                 print(f"  rate limited by GitHub, waiting {self.RETRY_AFTER_S} s and retrying")
                 time.sleep(self.RETRY_AFTER_S)
                 continue
-            raise GhError(f"{_describe(cmd)}\n{result.stderr.strip()}")
+            raise GhError(f"{cmd.summary}\n{result.stderr.strip()}")
 
 
 def repo_slug(url: str) -> str:
@@ -261,44 +367,41 @@ def repo_slug(url: str) -> str:
     return "/".join(url.rstrip("/").split("/")[-2:])
 
 
-def _describe(cmd: list[str]) -> str:
-    kind = " ".join(cmd[1:3])
-    if cmd[1] == "api":
-        return f"milestone  {next(a[6:] for a in cmd if a.startswith('title='))}"
-    if kind == "label create":
-        return f"label      {cmd[3]}"
-    if kind == "issue edit":
-        return f"detail     issue #{cmd[3]}"
-    return f"issue      {cmd[cmd.index('--title') + 1]}"
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m planning.github_sync", description=__doc__.split("\n")[0])
     parser.add_argument("--plan", type=Path, default=Path(__file__).with_name("project.yaml"))
-    parser.add_argument("--apply", action="store_true", help="create the missing items (default: dry run)")
+    parser.add_argument("--project", type=int, metavar="NUMBER",
+                        help="also set Start, Target and Estimate on this GitHub Project")
+    parser.add_argument("--apply", action="store_true", help="make the changes (default: dry run)")
     args = parser.parse_args(argv)
 
     project = load(args.plan)
     level(project)
     repo = repo_slug(project.config.repository)
     client = GhClient(repo)
-    commands = plan_commands(desired_state(project), client.existing(), repo)
+    try:
+        commands = plan_commands(desired_state(project), client.existing(), repo)
+        if args.project is not None:
+            commands += plan_field_commands(schedules(project), client.board(args.project))
+    except GhError as err:
+        print(f"Could not read GitHub: {err}", file=sys.stderr)
+        return 1
 
     if not commands:
         print(f"{repo} is already in sync with the plan.")
         return 0
     for cmd in commands:
-        print(("creating   " if args.apply else "would add  ") + _describe(cmd))
+        print(("applying   " if args.apply else "would do   ") + cmd.summary)
         if args.apply:
             try:
                 client.run(cmd)
             except GhError as err:
-                print(f"\nGitHub refused: {err}\nNothing after this was created. "
-                      "Fix the cause and run again: only the missing items are created.",
+                print(f"\nGitHub refused: {err}\nNothing after this was changed. "
+                      "Fix the cause and run again: only what is still missing is done.",
                       file=sys.stderr)
                 return 1
     if not args.apply:
-        print(f"\n{len(commands)} items missing. Run again with --apply to create them.")
+        print(f"\n{len(commands)} changes pending. Run again with --apply to make them.")
     return 0
 
 
