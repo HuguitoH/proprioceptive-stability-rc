@@ -7,7 +7,7 @@ import pytest
 
 from planning.github_sync import (Existing, ProjectBoard, Schedule, desired_state, issue_title,
                                   milestone_title, next_milestone, plan_commands,
-                                  plan_field_commands, repo_slug, schedules)
+                                  plan_field_commands, repo_slug, schedules, is_transient)
 from planning.loader import load
 from planning.model import PlanError
 from planning.scheduler import level
@@ -153,3 +153,15 @@ def test_issues_not_on_the_board_are_skipped():
 
 def test_estimates_are_whole_hours(project):
     assert all(isinstance(s.estimate, int) for s in schedules(project).values())
+
+
+def test_network_failures_are_transient_refusals_are_not():
+    assert is_transient('Post "https://api.github.com/graphql": net/http: TLS handshake timeout')
+    assert not is_transient("GraphQL: Column value must be a valid value for number column")
+
+
+def test_only_idempotent_commands_may_be_retried(state):
+    board = ProjectBoard("P1", FIELD_IDS, {"2.5 X": ("I9", {})})
+    wanted = {"2.5 X": Schedule(date(2026, 10, 19), date(2026, 11, 15), 14)}
+    assert all(c.idempotent for c in plan_field_commands(wanted, board))
+    assert not any(c.idempotent for c in plan_commands(state, Existing(), REPO))
