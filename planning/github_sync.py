@@ -47,10 +47,25 @@ ROLLING_WAVE_NOTE = ("_Not detailed yet. Following the rolling-wave approach of 
 
 @dataclass(frozen=True)
 class Command:
-    """A gh invocation plus a one-line summary for the dry run."""
+    """A gh invocation plus a one-line summary for the dry run.
+
+    `idempotent` marks commands that leave GitHub in the same state however
+    many times they run (setting a field or a body). Only those are retried
+    after a network failure, because a timeout does not say whether the first
+    attempt reached GitHub: retrying `gh issue create` could create a duplicate.
+    """
 
     argv: tuple[str, ...]
     summary: str
+    idempotent: bool = False
+
+
+# Failures of the connection, not refusals by GitHub.
+TRANSIENT_ERRORS = ("timeout", "connection reset", "eof", "temporarily unavailable", "502", "503")
+
+
+def is_transient(stderr: str) -> bool:
+    return any(marker in stderr.lower() for marker in TRANSIENT_ERRORS)
 
 
 @dataclass(frozen=True)
@@ -213,7 +228,7 @@ def plan_commands(desired: State, existing: Existing, repo: str) -> list[Command
         stale = existing.placeholders.get(iss.title)
         if stale and stale[1].strip() != iss.body.strip():
             cmds.append(Command(("gh", "issue", "edit", str(stale[0]), "--repo", repo,
-                                 "--body", iss.body), f"detail     {iss.title}"))
+                                 "--body", iss.body), f"detail     {iss.title}", idempotent=True))
             continue
         if iss.title not in existing.issues:
             argv = ["gh", "issue", "create", "--repo", repo, "--title", iss.title, "--body", iss.body]
@@ -286,7 +301,7 @@ def plan_field_commands(wanted: dict[str, Schedule], board: ProjectBoard) -> lis
             cmds.append(Command(("gh", "project", "item-edit", "--id", item_id,
                                  "--project-id", board.project_id,
                                  "--field-id", board.field_ids[key], flag, value),
-                                f"field      {title}: {FIELD_NAMES[key]} = {value}"))
+                                f"field      {title}: {FIELD_NAMES[key]} = {value}", idempotent=True))
     return cmds
 
 
@@ -358,14 +373,19 @@ class GhClient:
         return ProjectBoard(project["id"], {k: by_name[v] for k, v in FIELD_NAMES.items()}, items)
 
     def run(self, cmd: Command) -> None:
-        for attempt in (1, 2):
+        for attempt in (1, 2, 3):
             result = subprocess.run(cmd.argv, capture_output=True, text=True)
             if result.returncode == 0:
                 time.sleep(self.PAUSE_S)
                 return
-            if attempt == 1 and "rate limit" in result.stderr.lower():
+            last_try = attempt == 3
+            if not last_try and "rate limit" in result.stderr.lower():
                 print(f"  rate limited by GitHub, waiting {self.RETRY_AFTER_S} s and retrying")
                 time.sleep(self.RETRY_AFTER_S)
+                continue
+            if not last_try and cmd.idempotent and is_transient(result.stderr):
+                print(f"  network error, retrying in {5 * attempt} s")
+                time.sleep(5 * attempt)
                 continue
             raise GhError(f"{cmd.summary}\n{result.stderr.strip()}")
 
