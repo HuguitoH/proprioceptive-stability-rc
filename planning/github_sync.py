@@ -233,11 +233,16 @@ FIELD_NAMES = {"start": "Start", "target": "Target", "estimate": "Estimate"}
 
 @dataclass(frozen=True)
 class Schedule:
-    """Planned values of one issue, in the form the Project fields take."""
+    """Planned values of one issue, in the form the Project fields take.
+
+    The estimate is in whole hours. `gh project item-edit --number` sends the
+    value as a 32-bit float, so 10.3 arrives as 10.300000190734863 and GitHub
+    rejects it. The exact PERT value stays in the plan and in the issue body.
+    """
 
     start: date
     target: date
-    estimate: float
+    estimate: int
 
 
 @dataclass(frozen=True)
@@ -253,13 +258,16 @@ def schedules(project: Project) -> dict[str, Schedule]:
     """Issue title -> planned start, target and estimate. The project must be levelled."""
     c = project.config
     end = monday(c, c.weeks) - timedelta(days=1)
-    out = {issue_title(t): Schedule(c.start, end, round(t.estimate.expected, 1))
-           for t in project.ongoing}
+    out = {issue_title(t): Schedule(c.start, end, _hours(t)) for t in project.ongoing}
     for t in project.tasks:
         if not t.is_milestone:
-            out[issue_title(t)] = Schedule(start_date(c, t), finish_date(c, t),
-                                           round(t.estimate.expected, 1))
+            out[issue_title(t)] = Schedule(start_date(c, t), finish_date(c, t), _hours(t))
     return out
+
+
+def _hours(task: Task) -> int:
+    """PERT expected effort rounded half up to whole hours (Python's round() rounds 2.5 to 2)."""
+    return int(task.estimate.expected + 0.5)
 
 
 def plan_field_commands(wanted: dict[str, Schedule], board: ProjectBoard) -> list[Command]:
@@ -272,7 +280,7 @@ def plan_field_commands(wanted: dict[str, Schedule], board: ProjectBoard) -> lis
         item_id, current = board.items[title]
         for key, flag, value in (("start", "--date", sched.start.isoformat()),
                                  ("target", "--date", sched.target.isoformat()),
-                                 ("estimate", "--number", f"{sched.estimate:g}")):
+                                 ("estimate", "--number", str(sched.estimate))):
             if _same(current.get(key), value):
                 continue
             cmds.append(Command(("gh", "project", "item-edit", "--id", item_id,
