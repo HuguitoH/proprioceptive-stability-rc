@@ -1,4 +1,19 @@
 date,task_id,hours,note
-2026-10-21,1.2,1.0,Appendix D final revision and submission
-2026-10-21,1.2,2.5,Thesis repository and Zotero bibliography and appendix records
-2026-10-21,2.6,2.5,Public repository with native tests and CI and GitHub sync
+2026-10-21,1.2,1.0,Appendix D final revision and submission.
+2026-10-21,9.6,1.5,Thesis repository and appendix records.
+2026-10-21,9.7,1.0,Zotero bibliography setup.
+2026-10-21,2.6,1.5,Public repository with native tests and CI.
+2026-10-21,1.2,1.0,GitHub sync of the plan.
+2026-10-24,2.1,1.5,Shopping basket review.
+2026-10-24,2.5,2.0,Receiver signal and driveshaft ratio measurements with ADC and pilot-input design.
+2026-10-24,2.7,1.0,Receiver and ESC fail-safe bench tests and failure-chain analysis.
+2026-10-24,1.2,0.5,Issue organisation and hours tracking.
+2026-11-03,2.1,0.5,Parts inventory against the basket.
+2026-11-03,2.2,0.5,Upper-deck requirements for IMU placement and deck mounting points.
+2026-11-04,2.2,0.5,Battery placement from weighed masses and CG shift with the Zeee moved to traction.
+2026-11-13,2.2,0.5,Component list and upper or lower deck assignment.
+2026-11-13,2.3,0.5,Buck identification (LM2596S vs XL4016) and dropout analysis.
+2026-11-14,2.3,1.25,Buck selection with a brownout probe and WiFi load test.
+2026-11-14,2.5,0.75,PlatformIO in WSL and usbipd troubleshooting.
+2026-11-14,1.2,0.5,Issue review and W44–W46 diaries and replanning prep.
+2026-11-15,2.1,0.5,Bill of materials with spend and per-car cost.
