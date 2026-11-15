@@ -1,11 +1,11 @@
 item,category,qty,pack_price_eur,units_per_pack,units_on_car,source,role,note
-Jamara Dakar 1:10 EP NiMH desert buggy (ref. 053290),car,1,,1,1,Jamara,"Platform: 4WD chassis, slipper clutch, oil shocks",owned before the project
-ESC 40 A waterproof (in the Dakar kit),car,1,,1,1,Jamara,Motor speed control; BEC powers receiver and servo,Included with the car
+Jamara Dakar 1:10 EP NiMH desert buggy (ref. 053290),car,1,,1,1,Jamara,"Platform with 4WD chassis, slipper clutch and oil shocks",owned before the project
+ESC 40 A waterproof (in the Dakar kit),car,1,,1,1,Jamara,"Motor speed control, its BEC powers the receiver and servo",Included with the car
 "Motor Venti 550, 270 W (in the Dakar kit)",car,1,,1,1,Jamara,Traction,Included with the car
 Steering servo 4.5 kg waterproof (in the Dakar kit),car,1,,1,1,Jamara,Steering,Included with the car
-2.4 GHz transmitter and CCX receiver (in the Dakar kit),car,1,,1,1,Jamara,Pilot input; 2 usable channels,Included with the car
+2.4 GHz transmitter and CCX receiver (in the Dakar kit),car,1,,1,1,Jamara,Pilot input with 2 usable channels,Included with the car
 "NiMH 7.2 V 4200 mAh, Tamiya",car,1,,1,1,,Electronics battery (300 g),owned before the project
-ESP32-S3 DevKitC-1 N16R8 (diymore),car,1,20.98,2,1,Amazon.es,Main controller; second board spare,
+ESP32-S3 DevKitC-1 N16R8 (diymore),car,1,20.98,2,1,Amazon.es,"Main controller, second board kept as a spare",
 MPU6050 IMU module (ARCELI),car,1,6.99,1,1,Amazon.es,Gyroscope and accelerometer,
 "KY-003 Hall sensor module, A3144 (Hailege)",car,1,6.49,5,1,Amazon.es,Driveshaft speed,
 Neodymium magnets 3x1 mm (UTOMAG),car,1,9.99,300,2,Amazon.es,Driveshaft targets for the Hall sensor,
@@ -20,9 +20,9 @@ Mini blade fuse kit 2-40 A (JOREST),car,1,8.99,100,1,Amazon.es,2 A fuse for the 
 Rocker switch SPST (CABLEPELADO),car,1,4.81,1,1,Amazon.es,Electronics power switch,
 Double-sided perfboard (RUNCCI-YUN kit),car,1,10.98,19,1,Amazon.es,Power distribution and signal board,Kit also includes headers and terminals
 "M3 nylon spacers, screws and nuts",car,1,8.98,260,,Amazon.es,Mounting the perfboard and the deck,Units on car to be counted at assembly
-"Carbon film resistor kit 1/4 W, 50 values",consumable,1,10.99,,,Amazon.es,22 kOhm Hall pull-down; 1k/2k receiver divider if needed,
+"Carbon film resistor kit 1/4 W, 50 values",consumable,1,10.99,,,Amazon.es,22 kOhm Hall pull-down and 1k/2k receiver divider if needed,
 "Silicone wire 24 AWG, 8 colours (LightingWill)",consumable,1,20.99,,,Amazon.es,Signal wiring,
-Silicone wire 18 AWG (QWORK),consumable,1,19.00,,,Amazon.es,Power wiring,Price from memory (18-20 EUR); listing no longer available
+Silicone wire 18 AWG (QWORK),consumable,1,19.00,,,Amazon.es,Power wiring,"Price from memory (18-20 EUR), listing no longer available"
 Heat shrink tubing kit (Arnocanali),consumable,1,7.74,,,Amazon.es,Insulating joints,
 "Cable ties 80 mm, black",consumable,1,6.99,,,Amazon.es,Cable management,
 Lead-free solder wire 0.8 mm 100 g (HR990307),consumable,1,14.99,,,Amazon.es,Soldering,
