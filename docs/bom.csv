@@ -1,0 +1,38 @@
+item,category,qty,pack_price_eur,units_per_pack,units_on_car,source,role,note
+Jamara Dakar 1:10 EP NiMH desert buggy (ref. 053290),car,1,,1,1,Jamara,"Platform: 4WD chassis, slipper clutch, oil shocks",owned before the project
+ESC 40 A waterproof (in the Dakar kit),car,1,,1,1,Jamara,Motor speed control; BEC powers receiver and servo,Included with the car
+"Motor Venti 550, 270 W (in the Dakar kit)",car,1,,1,1,Jamara,Traction,Included with the car
+Steering servo 4.5 kg waterproof (in the Dakar kit),car,1,,1,1,Jamara,Steering,Included with the car
+2.4 GHz transmitter and CCX receiver (in the Dakar kit),car,1,,1,1,Jamara,Pilot input; 2 usable channels,Included with the car
+"NiMH 7.2 V 4200 mAh, Tamiya",car,1,,1,1,,Electronics battery (300 g),owned before the project
+ESP32-S3 DevKitC-1 N16R8 (diymore),car,1,20.98,2,1,Amazon.es,Main controller; second board spare,
+MPU6050 IMU module (ARCELI),car,1,6.99,1,1,Amazon.es,Gyroscope and accelerometer,
+"KY-003 Hall sensor module, A3144 (Hailege)",car,1,6.49,5,1,Amazon.es,Driveshaft speed,
+Neodymium magnets 3x1 mm (UTOMAG),car,1,9.99,300,2,Amazon.es,Driveshaft targets for the Hall sensor,
+"MicroSD card reader module, SPI",car,1,8.97,5,1,Amazon.es,Data logger interface,
+MicroSD card 16 GB (KEXIN),car,1,9.99,1,1,Amazon.es,Run logs,
+LM2596S buck converter with display (AZDelivery),car,1,7.99,1,1,Amazon.es,5 V rail for the electronics,
+Electrolytic capacitors 1000 uF 16 V (GTIWUNG),car,1,6.99,30,1,Amazon.es,Bulk capacitance on the 5 V rail,
+"Zeee NiMH 7.2 V 5000 mAh, Tamiya",car,1,30.99,1,1,Amazon.es,Traction battery (423 g),
+"Tamiya male/female leads 14 AWG (YIXISI), pairs",car,1,8.59,2,1,Amazon.es,Electronics battery pigtail,
+Inline mini blade fuse holder,car,1,6.99,2,1,Amazon.es,Fuse on the electronics battery line,
+Mini blade fuse kit 2-40 A (JOREST),car,1,8.99,100,1,Amazon.es,2 A fuse for the electronics line,
+Rocker switch SPST (CABLEPELADO),car,1,4.81,1,1,Amazon.es,Electronics power switch,
+Double-sided perfboard (RUNCCI-YUN kit),car,1,10.98,19,1,Amazon.es,Power distribution and signal board,Kit also includes headers and terminals
+"M3 nylon spacers, screws and nuts",car,1,8.98,260,,Amazon.es,Mounting the perfboard and the deck,Units on car to be counted at assembly
+"Carbon film resistor kit 1/4 W, 50 values",consumable,1,10.99,,,Amazon.es,22 kOhm Hall pull-down; 1k/2k receiver divider if needed,
+"Silicone wire 24 AWG, 8 colours (LightingWill)",consumable,1,20.99,,,Amazon.es,Signal wiring,
+Silicone wire 18 AWG (QWORK),consumable,1,19.00,,,Amazon.es,Power wiring,Price from memory (18-20 EUR); listing no longer available
+Heat shrink tubing kit (Arnocanali),consumable,1,7.74,,,Amazon.es,Insulating joints,
+"Cable ties 80 mm, black",consumable,1,6.99,,,Amazon.es,Cable management,
+Lead-free solder wire 0.8 mm 100 g (HR990307),consumable,1,14.99,,,Amazon.es,Soldering,
+No-clean flux 50 g (BOJACK),consumable,1,7.00,,,Amazon.es,Soldering,Half of a 2-pack (13.99 EUR)
+Desoldering wick 2 mm (CABLEPELADO),consumable,1,7.00,,,Amazon.es,Rework,
+"Foam board A3, 3 mm",consumable,2,2.50,,,Folder,Upper-deck mock-up (2.2),
+Third hand with magnetic base,tool,1,11.99,,,Amazon.es,Holding parts while soldering,
+Soldering tip cleaner,tool,1,7.69,,,Amazon.es,Soldering,
+Luggage scale 50 kg (GRIFEMA GA2006),tool,1,6.99,,,Amazon.es,Mass and left/right balance measurements,
+Cutter,tool,1,1.25,,,Folder,Cutting the mock-up,
+Digital multimeter HT-123,tool,1,,,,,Bench measurements,owned before the project
+Soldering iron with temperature control,tool,1,,,,,Soldering,owned before the project
+XL4016 buck converter,spare,1,,1,,,Spare 5 V supply,owned before the project
