@@ -17,3 +17,8 @@ date,task_id,hours,note
 2026-11-14,2.5,0.75,PlatformIO in WSL and usbipd troubleshooting.
 2026-11-14,1.2,0.5,Issue review and W44–W46 diaries and replanning prep.
 2026-11-15,2.1,0.5,Bill of materials with spend and per-car cost.
+2026-11-15,2.5,0.5,usbipd fixed by reinstalling it after VirtualBox removed its monitor service
+2026-11-16,1.2,0.5,Supervisor email and replanning numbers.
+2026-11-16,2.5,3.5,Transmitter settings and Hall bracket fix and receiver probe with signal characterisation and pilot timeout.
+2026-11-16,2.5,1.0,Compile database script and project moved to the WSL filesystem.
+2026-11-17,2.1,0.5,Measuring tape and ruler and protractor bought for steering and roll-out tests.
