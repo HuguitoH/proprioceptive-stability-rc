@@ -2,6 +2,7 @@
 .pio/
 firmware/include/secrets.h
 compile_commands.json
+logs/
 
 # - Python
 .venv/
@@ -19,3 +20,5 @@ data/processed/
 !.vscode/extensions.json
 !.vscode/settings.json
 .DS_Store
+
+
