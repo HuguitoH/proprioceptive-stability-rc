@@ -25,3 +25,6 @@ packages = ["planning","analysis"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[project.scripts]
+receiver-signal = "analysis.receiver_signal:main"
