@@ -1,0 +1,6 @@
+date,task_id,remaining_hours,note
+2026-11-25,2.2,2.5,Requirements and battery placement and component list done. Cutting and fitting the foam board and the photo with dimensions left.
+2026-11-25,2.3,9,Buck chosen and validated under load. Fuse and switch and harness and perfboard soldering and continuity check and schematic left.
+2026-11-25,2.5,12,Receiver characterised and pilot input designed. Board config and the 100 Hz task and RMT input and Hall speed and gyro bias and SD logger and telemetry task left.
+2026-11-25,2.6,3,CI runs on every push. Tests for speed and gyro bias and building the tools in CI left.
+2026-11-25,2.7,5,Link-loss behaviour tested by hand. Timeout and trigger dead man and watchdog and speed limit and the measured stop left.
