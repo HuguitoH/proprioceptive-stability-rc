@@ -5,6 +5,10 @@
    where their weekly hours fit the planning capacity. One person cannot run
    five tasks in parallel at full rate, so this step is what makes the dates real.
 3. A second backward pass on the levelled dates gives the slack.
+
+When replanning, finished tasks are pinned to the weeks they actually finished
+and add no load, and everything else is placed from the status week onwards
+with its remaining hours. The scheduling rules themselves do not change.
 """
 from __future__ import annotations
 
@@ -16,16 +20,26 @@ def ongoing_rate(project: Project) -> float:
     return sum(t.effort for t in project.ongoing) / project.config.weeks
 
 
+def week_hours(config: Config, week: int) -> float:
+    """Hours available in a 1-based week before loading and ongoing work."""
+    if week in config.capacity:
+        return config.capacity[week]
+    factor = 0.5 if week in config.christmas_weeks else 1.0
+    return factor * config.hours_per_week
+
+
 def week_capacity(project: Project, week: int) -> float:
     """Hours available for network tasks in a 1-based week."""
     c = project.config
+    if week in c.capacity:
+        return max(0.0, c.capacity[week] * c.weekly_loading - ongoing_rate(project))
+    # The baseline formula, kept as it was so the baseline plan rebuilds unchanged.
     factor = 0.5 if week in c.christmas_weeks else 1.0
     return factor * (c.hours_per_week * c.weekly_loading - ongoing_rate(project))
 
 
 def total_capacity(config: Config) -> float:
-    half = len(config.christmas_weeks)
-    return (config.weeks - half) * config.hours_per_week + half * config.hours_per_week / 2
+    return sum(week_hours(config, w) for w in range(1, config.weeks + 1))
 
 
 def topological_order(tasks: list[Task]) -> list[Task]:
@@ -72,19 +86,29 @@ def _place(project: Project, priority: dict[str, int]) -> tuple[dict[int, float]
     load: dict[int, float] = {}
     placed: set[str] = set()
     lateness = 0
+    first = project.status_week - 1                      # 0-based: nothing left goes before the status week
+    for t in project.tasks:
+        if t.is_done:                                    # history: where it happened, and no load ahead
+            t.ef = t.done_week
+            t.es = t.ef if t.is_milestone else max(0, t.ef - t.weeks)
+            placed.add(t.id)
     while len(placed) < len(project.tasks):
         ready = [t for t in project.tasks
                  if t.id not in placed and all(p in placed for p in t.after)]
         t = min(ready, key=lambda x: (priority[x.id], x.id))
-        start = max([by_id[p].ef for p in t.after] + [t.not_before])
+        start = max([by_id[p].ef for p in t.after] + [t.not_before, first])
         if t.fixed_week is not None:
             lateness = max(lateness, start - t.fixed_week)
             start = max(start, t.fixed_week)
         elif not t.is_milestone and t.baseline:
-            rate = t.effort / t.weeks
+            rate = t.effort_left / t.weeks
             while not all(load.get(w, 0.0) + rate <= week_capacity(project, w) + 1e-9
                           for w in range(start + 1, start + t.weeks + 1)):
                 start += 1
+                # Past the horizon every week has the standard capacity: if the task
+                # does not fit there either, it never will, so stop instead of looping.
+                if start > project.config.weeks and rate > week_capacity(project, start + 1) + 1e-9:
+                    raise PlanError(f"{t.id} needs {rate:.1f} h a week, more than any week has")
             for w in range(start + 1, start + t.weeks + 1):
                 load[w] = load.get(w, 0.0) + rate
         t.es, t.ef = start, start + t.weeks
@@ -121,7 +145,7 @@ def level(project: Project, strict: bool = True, iterations: int = 25) -> dict[i
         raise PlanError(f"the plan misses its fixed dates by {late} week(s)")
     backward_pass(project)                               # slack on the levelled dates
     if strict:
-        negative = [t.id for t in project.tasks if t.slack < 0]
+        negative = [t.id for t in project.tasks if t.slack < 0 and not t.is_done]   # the past cannot slip
         if negative:
             raise PlanError(f"negative slack in {negative}")
     return {w: load.get(w, 0.0) for w in range(1, c.weeks + 1)}
@@ -131,7 +155,7 @@ def critical_ids(project: Project) -> set[str]:
     """Two segments: zero slack into the fixed poster date, and the least-slack
     chain after it into the submission."""
     c = project.config
-    base = [t for t in project.tasks if t.baseline]
+    base = [t for t in project.tasks if t.baseline and not t.is_done]   # only work still ahead can be critical
     before = {t.id for t in base
               if t.ef <= c.poster_week and t.slack == 0
               and not (t.fixed_week is not None and not t.after)}  # a bare fixed date drives nothing

@@ -5,7 +5,8 @@ from pathlib import Path
 
 import yaml
 
-from .model import Config, Detail, Estimate, Feature, PlanError, Project, Risk, Task
+from .calendar import week_of
+from .model import Config, Detail, Estimate, Feature, PlanError, Project, Risk, Status, Task
 
 
 TASK_KEYS = {"id", "name", "short", "est", "weeks", "after", "secondary",
@@ -35,7 +36,10 @@ def _task(raw: dict) -> Task:
     )
 
 
-def load(path: Path) -> Project:
+def load(path: Path, status: Path | None = None) -> Project:
+    """Read the plan. With a status file, finished work stays where it happened
+    and the rest is scheduled from the status week (replanning). Without one,
+    the plan is built from week 1 (the baseline)."""
     data = yaml.safe_load(path.read_text())
     c = data["config"]
     config = Config(
@@ -50,6 +54,7 @@ def load(path: Path) -> Project:
         submission_week=c["submission_week"],
         repository=c["repository"],
         class_days=tuple(c["class_days"]),
+        capacity={int(w): float(h) for w, h in c.get("capacity", {}).items()},
     )
     project = Project(
         config=config,
@@ -62,8 +67,39 @@ def load(path: Path) -> Project:
         traceability={str(k): v for k, v in data.get("traceability", {}).items()},
     )
     _attach_details(project, data.get("details", {}))
+    if status is not None:
+        apply_status(project, read_status(status))
     validate(project)
     return project
+
+
+def read_status(path: Path) -> Status:
+    data = yaml.safe_load(path.read_text())
+    return Status(
+        as_of=data["as_of"],
+        done={str(k): int(v) for k, v in (data.get("done") or {}).items()},
+        remaining={str(k): float(v) for k, v in (data.get("remaining") or {}).items()},
+    )
+
+
+def apply_status(project: Project, status: Status) -> None:
+    tasks = {t.id: t for t in project.tasks}
+    unknown = sorted((set(status.done) | set(status.remaining)) - set(tasks))
+    if unknown:
+        raise PlanError(f"status mentions unknown tasks {unknown}")
+    project.status_week = week_of(project.config, status.as_of)
+    for task_id, week in status.done.items():
+        if week > project.status_week:
+            raise PlanError(f"{task_id} finished in week {week}, after the status week {project.status_week}")
+        tasks[task_id].done_week = week
+    for task_id, hours in status.remaining.items():
+        if task_id in status.done:
+            raise PlanError(f"{task_id} is done, so it cannot have hours remaining")
+        if hours <= 0:
+            raise PlanError(f"{task_id}: remaining hours must be positive (close the issue instead)")
+        if tasks[task_id].is_milestone:
+            raise PlanError(f"{task_id} is a milestone and has no hours")
+        tasks[task_id].remaining = hours
 
 
 def _attach_details(project: Project, details: dict) -> None:

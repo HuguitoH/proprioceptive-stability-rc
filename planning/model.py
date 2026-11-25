@@ -65,6 +65,9 @@ class Task:
     not_before: int = 0                   # earliest start week index, for levelling
     evidence: str = ""                    # what proves a milestone is reached
     detail: Detail | None = None          # description and definition of done
+    # Filled in from the status snapshot (planning/status.yaml) when replanning.
+    done_week: int | None = None          # 1-based week the task finished
+    remaining: float | None = None        # hours left on a started task, replaces the estimate
     # Filled in by the scheduler (week indices, 0-based, end-exclusive).
     es: int = 0
     ef: int = 0
@@ -80,8 +83,17 @@ class Task:
         return self.id.split(".")[0]
 
     @property
+    def is_done(self) -> bool:
+        return self.done_week is not None
+
+    @property
     def effort(self) -> float:
         return self.estimate.expected if self.estimate else 0.0
+
+    @property
+    def effort_left(self) -> float:
+        """Hours still to schedule: the latest estimate of what is left, or the full estimate."""
+        return self.remaining if self.remaining is not None else self.effort
 
     @property
     def slack(self) -> int:
@@ -129,6 +141,22 @@ class Config:
     submission_week: int
     repository: str
     class_days: tuple[date, ...]
+    # Hours available in specific weeks (1-based), overriding hours_per_week and
+    # the Christmas halving. Set at each replan from the weeks actually ahead.
+    capacity: dict[int, float] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Status:
+    """Progress at a review date, read from planning/status.yaml.
+
+    done maps each finished task to the 1-based week it finished. remaining maps
+    each started task to the hours still left on it.
+    """
+
+    as_of: date
+    done: dict[str, int]
+    remaining: dict[str, float]
 
 
 @dataclass(frozen=True)
@@ -159,6 +187,7 @@ class Project:
     network: dict
     scope: list[Feature] = field(default_factory=list)
     traceability: dict[str, str] = field(default_factory=dict)   # work package -> objective and RP section
+    status_week: int = 1          # 1-based week of the status snapshot, nothing left is scheduled before it
 
     def task(self, task_id: str) -> Task:
         return next(t for t in self.tasks if t.id == task_id)

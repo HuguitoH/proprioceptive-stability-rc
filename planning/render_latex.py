@@ -7,11 +7,12 @@ from datetime import timedelta
 
 from . import calendar as cal
 from .model import Feature, Project, Task
-from .scheduler import ongoing_rate, total_capacity, week_capacity
+from .scheduler import ongoing_rate, total_capacity, week_capacity, week_hours
 
 PHASE_COLOUR = {"1": "phpm", "2": "phbuild", "3": "phvalid", "4": "phvalid", "5": "phvalid",
                 "6": "phexp", "7": "phexp", "8": "phwrite", "9": "phwrite", "10": "phsec"}
 RAG_COLOUR = {"red": "ragred", "amber": "ragamber", "green": "raggreen"}
+DONE = "bar/.append style={fill=black!35, draw=black!55}"     # finished work, from the status snapshot
 HATCH = ("bar/.append style={fill=none, draw=black!40, pattern=north east lines, "
          "pattern color=black!35}")
 
@@ -21,7 +22,7 @@ def _h(x: float) -> str:
     return f"{x:.1f}".rstrip("0").rstrip(".")
 
 
-# --------------------------------------------------------------------------- numbers
+# numbers
 def summary(project: Project) -> dict[str, float]:
     c = project.config
     base = [t for t in project.ongoing + project.tasks if t.baseline and t.estimate]
@@ -68,7 +69,7 @@ def macros(project: Project, crit: set[str]) -> str:
     return "\n".join(f"\\newcommand{{\\{k}}}{{{v}}}" for k, v in values.items()) + "\n"
 
 
-# --------------------------------------------------------------------------- tables
+# tables
 def effort_table(project: Project) -> str:
     rows = []
     every = project.ongoing + project.tasks
@@ -96,6 +97,7 @@ def schedule_table(project: Project, crit: set[str]) -> str:
             continue
         ident = f"\\textbf{{{t.id}}}" if t.id in crit else t.id
         ident += "$^{\\dagger}$" if t.secondary else ""
+        ident += " (done)" if t.is_done else ""
         after = ", ".join(t.after) or "--"
         rows.append(f"{ident} & {t.short} & {t.weeks} & {after} & "
                     f"W{t.es + 1} ({cal.fmt(cal.start_date(c, t))}) & "
@@ -124,7 +126,7 @@ def risk_table(project: Project) -> str:
     return "\n".join(rows) + "\n"
 
 
-# --------------------------------------------------------------------------- figures
+# figures
 def gantt(project: Project, crit: set[str]) -> str:
     c = project.config
     lines = [" ".join(f"\\gantttitle{{{y}}}{{{n}}}" for y, n in cal.year_spans(c)) + " \\\\",
@@ -140,6 +142,10 @@ def gantt(project: Project, crit: set[str]) -> str:
     lo, hi = min(c.christmas_weeks), max(c.christmas_weeks)
     lines.append(f"\\ganttbar[bar/.append style={{fill=black!12}}, bar label font=\\sffamily\\scriptsize\\itshape]"
                  f"{{Christmas break (half capacity)}}{{{lo}}}{{{hi}}} \\\\[grid]")
+    if project.status_week > 1:                          # revised plan: everything left of the line has happened
+        # No label: it would sit on top of the task rows. The figure caption explains the line.
+        lines.append(f"\\ganttvrule[vrule/.append style={{draw=critred, dashed, line width=1pt}}]"
+                     f"{{}}{{{project.status_week - 1}}}")
 
     current = None
     for t in project.tasks:
@@ -154,14 +160,16 @@ def gantt(project: Project, crit: set[str]) -> str:
             lines.append(f"\\ganttmilestone[{style}]{{{t.short}}}{{{t.ef}}} \\\\")
             continue
         colour = PHASE_COLOUR[t.work_package]
-        if t.secondary:
+        if t.is_done:
+            style = DONE
+        elif t.secondary:
             style = f"bar/.append style={{fill=white, draw={colour}, dashed, line width=0.8pt}}"
         elif t.id in crit:
             style = f"bar/.append style={{fill={colour}, draw=critred, line width=1.2pt}}"
         else:
             style = f"bar/.append style={{fill={colour}}}"
         line = f"\\ganttbar[{style}]{{{t.id} {t.short}}}{{{t.es + 1}}}{{{t.ef}}}"
-        if t.slack > 0:
+        if t.slack > 0 and not t.is_done:             # the past has no slack to show
             line += f" \\ganttbar[inline=false, {HATCH}]{{}}{{{t.ef + 1}}}{{{t.lf}}}"
         lines.append(line + " \\\\")
     return "\n".join(lines) + "\n"
@@ -284,8 +292,8 @@ def load_chart(project: Project, load: dict[int, float]) -> str:
     lines = []
     for w in range(1, c.weeks + 1):
         x = (w - 1) * bar_w
-        half = 0.5 if w in c.christmas_weeks else 1.0
-        net, mgmt, avail = load[w], loe * half, c.hours_per_week * half
+        half = 0.5 if w in c.christmas_weeks and w not in c.capacity else 1.0
+        net, mgmt, avail = load[w], loe * half, week_hours(c, w)
         lines += [
             f"\\fill[loadnet] ({x + 0.04:.2f},0) rectangle ({x + bar_w - 0.04:.2f},{net * y_scale:.3f});",
             f"\\fill[loadloe] ({x + 0.04:.2f},{net * y_scale:.3f}) rectangle "
@@ -296,7 +304,9 @@ def load_chart(project: Project, load: dict[int, float]) -> str:
         ]
         if w % 2 == 1:
             lines.append(f"\\node[axislabel, below] at ({x + bar_w / 2:.2f},0) {{{w}}};")
-    for h in (0, 4, 8, 12, 14):
+    top = max(week_hours(c, w) for w in range(1, c.weeks + 1))
+    ticks = (0, 4, 8, 12, 14) if top <= c.hours_per_week else tuple(range(0, int(top) + 1, 4))
+    for h in ticks:
         lines.append(f"\\node[axislabel, left] at (0,{h * y_scale:.3f}) {{{h}}};")
     lines += [f"\\draw[black!50] (0,0) -- ({c.weeks * bar_w:.2f},0);",
               f"\\node[axislabel, rotate=90] at (-0.75,{7 * y_scale:.3f}) {{hours per week}};",
