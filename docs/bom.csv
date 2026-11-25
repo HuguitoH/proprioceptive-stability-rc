@@ -36,3 +36,6 @@ Cutter,tool,1,1.25,,,Folder,Cutting the mock-up,
 Digital multimeter HT-123,tool,1,,,,,Bench measurements,owned before the project
 Soldering iron with temperature control,tool,1,,,,,Soldering,owned before the project
 XL4016 buck converter,spare,1,,1,,,Spare 5 V supply,owned before the project
+Fibreglass measuring tape 20 m (Liyset DR69840),tool,1,5.95,1,0,Local shop,Roll-out distance and marked test runs,Check where zero starts against the ruler
+Protractor 180 degrees (MP PL041),tool,1,0.80,1,0,Local shop,Steering angle vs pulse width,Angles read from lines traced on paper
+Aluminium ruler 30 cm (MP PA003),tool,1,1.00,1,0,Local shop,Straight edge against the wheel for steering lines,
